@@ -1,0 +1,167 @@
+5. Install Prometheus & Grafana on the cluster
+We’ll use Helm and kube-prometheus-stack (all-in-one).
+
+Install Helm if you don’t have it:
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+Add repo and install:
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+kubectl create namespace monitoring
+helm install monitoring prometheus-community/kube-prometheus-stack -n monitoring
+
+##########################
+
+# Add repo
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+# Install stack (release name: monitoring)
+helm install monitoring prometheus-community/kube-prometheus-stack \
+  --namespace monitoring
+
+
+-------------------------
+
+kubectl get servicemonitors -n monitoring --show-labels
+
+
+
+
+#########################
+
+Get Grafana password
+In another WSL terminal:
+kubectl get secret monitoring-grafana -n monitoring -o jsonpath="{.data.admin-user}" | base64 -d; echo
+
+
+#############################
+
+lm.elastic.co
+helm repo update
+
+Now install a single-node Elasticsearch (good enough for Minikube):
+helm install elasticsearch elastic/elasticsearch \
+  --namespace logging \
+  --set replicas=1 \
+  --set minimumMasterNodes=1 \
+  --set resources.requests.cpu="100m" \
+  --set resources.requests.memory="512Mi" \
+  --set resources.limits.cpu="500m" \
+  --set resources.limits.memory="1Gi"
+
+Check pods:
+kubectl get pods -n logging
+
+Wait until elasticsearch-master-0 (or similar) is Running.
+
+STEP 3 – Install Kibana
+Still in the same repo:
+helm install kibana elastic/kibana \
+  --namespace logging \
+  --set resources.requests.cpu="50m" \
+  --set resources.requests.memory="256Mi" \
+  --set resources.limits.cpu="200m" \
+  --set resources.limits.memory="512Mi"
+
+Check:
+kubectl get pods -n logging
+
+You should see something like:
+elasticsearch-master-0
+kibana-...
+
+
+Both should become Running.
+
+STEP 4 – Access Kibana in your browser
+Port-forward Kibana from WSL:
+kubectl port-forward svc/kibana-kibana -n logging 5601:5601
+
+Keep this terminal open.
+Then on Windows open:
+http://localhost:5601
+
+Kibana UI should appear (it may take ~1–2 minutes after pod is Running).
+
+STEP 5 – Install Filebeat (log shipper)
+Filebeat will:
+run as a DaemonSet on each node
+read container logs from /var/log/containers
+add Kubernetes metadata (namespace, pod, container)
+send everything to Elasticsearch in logging namespace
+
+
+5.1 Create a filebeat-values.yaml
+In WSL, for example in ~/devops-30days/week3-portfolio2/logging:
+mkdir -p ~/devops-30days/week3-portfolio2/logging
+cd ~/devops-30days/week3-portfolio2/logging
+nano filebeat-values.yaml
+
+Paste this (simple config, no Logstash, direct to Elasticsearch):
+# filebeat-values.yaml
+daemonset:
+  enabled: true
+
+filebeatConfig:
+  filebeat.yml: |
+    filebeat.inputs:
+      - type: container
+        paths:
+          - /var/log/containers/*.log
+        processors:
+          - add_kubernetes_metadata:
+              host: ${NODE_NAME}
+              matchers:
+                - logs_path:
+                    logs_path: "/var/log/containers/"
+    output.elasticsearch:
+      hosts: ["elasticsearch-master.logging.svc.cluster.local:9200"]
+    setup.template.enabled: true
+    setup.ilm.enabled: false
+
+# Give Filebeat access to container logs
+extraVolumes:
+  - name: varlog
+    hostPath:
+      path: /var/log
+extraVolumeMounts:
+  - name: varlog
+    mountPath: /var/log
+
+# Add environment variable for node name
+extraEnv:
+  - name: NODE_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: spec.nodeName
+
+Save and exit.
+5.2 Install Filebeat via Helm
+helm install filebeat elastic/filebeat \
+  --namespace logging \
+  -f filebeat-values.yaml
+
+Check pods:
+kubectl get pods -n logging
+
+You should now see Filebeat DaemonSet pods, e.g.:
+filebeat-filebeat-xxxxx
+
+
+Wait until they are running.
+
+STEP 6 – Confirm logs are reaching 
+
+
+#########################################
+
+Then ELK side does the job:
+
+Deploy Filebeat/Fluent Bit to ship pod logs.
+Filebeat / Fluent Bit as a DaemonSet reads those container logs.
+
+It sends them to Elasticsearch (directly or via Logstash).
+
+Kibana lets you search / visualize them.

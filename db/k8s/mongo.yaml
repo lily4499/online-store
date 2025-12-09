@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+  namespace: devops-portfolio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:6
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongo-data
+              mountPath: /data/db
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+      volumes:
+        - name: mongo-data
+          emptyDir: {}   # demo only
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: devops-portfolio
+spec:
+  selector:
+    app: mongo
+  ports:
+    - port: 27017
+      targetPort: 27017
+
+

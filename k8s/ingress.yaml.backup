@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: devops-portfolio-ingress
+  namespace: devops-portfolio
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: devops.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+          - path: /api/users
+            pathType: Prefix
+            backend:
+              service:
+                name: user-service
+                port:
+                  number: 8080
+          - path: /api/products
+            pathType: Prefix
+            backend:
+              service:
+                name: product-service
+                port:
+                  number: 8081
+          - path: /api/orders
+            pathType: Prefix
+            backend:
+              service:
+                name: order-service
+                port:
+                  number: 8082

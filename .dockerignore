@@ -1,0 +1,69 @@
+# =========================
+# VCS
+# =========================
+.git
+.gitignore
+
+# =========================
+# Node / dependencies
+# =========================
+node_modules
+**/node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Build artifacts (local)
+# =========================
+dist
+build
+**/dist
+**/build
+coverage
+**/coverage
+logs
+**/logs
+
+# =========================
+# Env / secrets
+# =========================
+.env
+.env.*
+**/.env
+**/.env.*
+
+# =========================
+# OS / Editor junk
+# =========================
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+*.swp
+*.swo
+
+# =========================
+# Tests / docs (optional)
+# =========================
+test
+tests
+**/test
+**/tests
+docs
+**/docs
+
+# =========================
+# Local DB data
+# =========================
+db/data
+db/tmp
+
+# =========================
+# Kubernetes / infra (not needed in image)
+# =========================
+k8s
+namespace.yaml
+note.txt
+

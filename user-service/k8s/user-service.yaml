@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: devops-portfolio
+  labels:
+    app: user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: laly9999/user-service:2
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DB_URI
+              value: mongodb://mongo:27017/userdb
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: devops-portfolio
+  labels:
+    app: user-service
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+spec:
+  selector:
+    app: user-service
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+
+########################
+
+
+# apiVersion: monitoring.coreos.com/v1
+# kind: ServiceMonitor
+# metadata:
+#   name: user-service-monitor
+#   namespace: monitoring
+#   labels:
+#     release: prometheus-stack        # 👈 change to your real Helm release name
+# spec:
+#   selector:
+#     matchLabels:
+#       app: user-service              # 👈 matches Service label
+#   namespaceSelector:
+#     matchNames:
+#       - devops-portfolio             # 👈 where user-service runs
+#   endpoints:
+#     - port: http                     # 👈 matches Service port name
+#       path: /metrics
+#       interval: 15s
+#       scrapeTimeout: 10s
+
+
+
+
+
+
+#######################################
+
+
+
+
+
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: user-service
+#   namespace: devops-portfolio
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: user-service
+#   template:
+#     metadata:
+#       labels:
+#         app: user-service
+#     spec:
+#       containers:
+#         - name: user-service
+#           image: laly9999/user-service:1
+#           ports:
+#             - containerPort: 8080
+#           env:
+#             - name: DB_URI
+#               value: mongodb://mongo:27017/userdb
+#           resources:
+#             requests:
+#               cpu: "100m"
+#               memory: "128Mi"
+#             limits:
+#               cpu: "200m"
+#               memory: "256Mi"
+
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: user-service
+#   namespace: devops-portfolio
+# spec:
+#   selector:
+#     app: user-service
+#   ports:
+#     - port: 8080
+#       targetPort: 8080
+

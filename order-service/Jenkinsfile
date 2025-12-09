@@ -1,0 +1,37 @@
+pipeline {
+  agent any
+  environment {
+    DOCKER_USER = 'laly9999'
+    IMAGE_NAME = 'order-service'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        git branch: 'main', url: 'https://github.com/lily4499/order-service.git'
+      }
+    }
+    stage('Build') {
+      steps { sh 'docker build -t $DOCKER_USER/$IMAGE_NAME:$BUILD_NUMBER .' }
+    }
+    stage('Push') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+          sh 'echo $PASS | docker login -u $USER --password-stdin'
+          sh 'docker push $DOCKER_USER/$IMAGE_NAME:$BUILD_NUMBER'
+        }
+      }
+    }
+    stage('Deploy') {
+      steps {
+        sh '''
+        sed -i "s#laly9999/order-service:.*#laly9999/order-service:${BUILD_NUMBER}#g" k8s/order-service.yaml
+        kubectl apply -f k8s/order-service.yaml
+        kubectl rollout status deployment/order-service -n devops-portfolio
+        '''
+      }
+    }
+  }
+}
+
+
